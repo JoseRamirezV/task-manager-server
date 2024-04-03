@@ -98,7 +98,6 @@ module.exports = {
         if (oldNotification) oldNotification.cancel();
       }
       const task = await Task.findByIdAndUpdate(id, req.body, { new: true });
-      console.log(scheduledJobs);
       res.status(200).json({ task });
     } catch (error) {
       res.status(500).json({ error: "couldn't update" });
