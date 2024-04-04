@@ -23,7 +23,11 @@ module.exports = {
       user._doc.updatedAt = undefined;
       user._doc.password = undefined;
       const token = jwt.sign({ ...user._doc }, process.env.SECRET_KEY);
-      res.cookie("token", token);
+      res.cookie("token", token, {
+        httpOnly: process.env.NODE_ENV !== "development",
+        secure: true,
+        sameSite: "none",
+      });
       res.status(200).json({ token, user: user._doc });
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -147,11 +151,12 @@ module.exports = {
       const { email, code, temporalToken, newPassword } = req.body;
       if (JSON.stringify(req.body) === "{}") throw new Error("Empty body");
       if (temporalToken) {
-        const userData= await User.findOneAndUpdate(
+        const userData = await User.findOneAndUpdate(
           { email },
           { temporalToken }
         );
-        if(!userData) throw new Error('Este correo no se encuentra registrado en Taskty')
+        if (!userData)
+          throw new Error("Este correo no se encuentra registrado en Taskty");
         sendEmail(email, "Código temporal", "Password", {
           user: userData.user,
           code: temporalToken,
@@ -190,7 +195,11 @@ module.exports = {
       user._doc.updatedAt = undefined;
       user._doc.password = undefined;
       const token = jwt.sign({ ...user._doc }, process.env.SECRET_KEY);
-      res.cookie("token", token);
+      res.cookie("token", token, {
+        httpOnly: process.env.NODE_ENV !== "development",
+        secure: true,
+        sameSite: "none",
+      });
       res.json({ user: { ...user._doc, token } });
     } catch (error) {
       res.status(500).json({ error: error.message });
