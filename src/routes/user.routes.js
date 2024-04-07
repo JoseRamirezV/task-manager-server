@@ -19,6 +19,6 @@ router.put("/change-password/:id", auth, changePassword);
 router.delete("/delete/:id&:pass", auth, deleteUser);
 router.put("/forgot-password", forgotPassword );
 router.put("/verify", verifyAccount);
-router.get("/isLogged/:token", verifyToken);
+router.get("/isLogged", verifyToken);
 
 module.exports = router;

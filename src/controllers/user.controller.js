@@ -13,7 +13,7 @@ module.exports = {
       const { email, password } = req.params;
       const user = await User.findOne({ email });
       if (!user)
-        return res.status(401).json({
+        return res.status(404).json({
           error: "Este correo no esta asociado con una cuenta Taskty",
         });
       const authenticated = bcrypt.compareSync(password, user.password);
@@ -22,13 +22,15 @@ module.exports = {
       user._doc.createdAt = undefined;
       user._doc.updatedAt = undefined;
       user._doc.password = undefined;
-      const token = jwt.sign({ ...user._doc }, process.env.SECRET_KEY);
+      const token = jwt.sign({ ...user._doc }, process.env.SECRET_KEY, {
+        expiresIn: "1d",
+      });
       res.cookie("token", token, {
-        httpOnly: process.env.NODE_ENV !== "development",
+        httpOnly: false,
         secure: true,
         sameSite: "none",
       });
-      res.status(200).json({ token, user: user._doc });
+      res.status(200).json({ user: user._doc });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -45,7 +47,7 @@ module.exports = {
       } = req.body;
       const exists = await User.findOne({ email });
       if (exists)
-        return res.json({
+        return res.status(400).json({
           exists:
             "Este correo electrónico ya se encuentra asociado a una cuenta Taskty",
         });
@@ -196,7 +198,7 @@ module.exports = {
       user._doc.password = undefined;
       const token = jwt.sign({ ...user._doc }, process.env.SECRET_KEY);
       res.cookie("token", token, {
-        httpOnly: process.env.NODE_ENV !== "development",
+        httpOnly: false,
         secure: true,
         sameSite: "none",
       });
@@ -208,19 +210,16 @@ module.exports = {
 
   verifyToken: (req, res) => {
     try {
-      jwt.verify(
-        req.params.token,
-        process.env.SECRET_KEY,
-        async (err, decoded) => {
-          if (err) res.status(401).send({ error: "Token invalido" });
-          const user = await User.findById(decoded._id);
-          user._doc.createdAt = undefined;
-          user._doc.updatedAt = undefined;
-          user._doc.password = undefined;
-          user._doc.temporalToken = undefined;
-          res.status(200).json(user);
-        }
-      );
+      const { token } = req.cookies;
+      jwt.verify(token, process.env.SECRET_KEY, async (err, decoded) => {
+        if (err) return res.status(401).json({ error: "La sesión caducó" });
+        const user = await User.findById(decoded._id);
+        user._doc.createdAt = undefined;
+        user._doc.updatedAt = undefined;
+        user._doc.password = undefined;
+        user._doc.temporalToken = undefined;
+        res.status(200).json({ user });
+      });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
