@@ -26,5 +26,12 @@
   "devDependencies": {
     "nodemon": "^3.1.0"
   },
-  "description": ""
+  "description": "",
+  "imports": {
+    "#controllers/*": "./src/controllers/*.js",
+    "#models/*": "./src/models/*.js",
+    "#config/*": "./src/config/*.js",
+    "#routes/*": "./src/routes/*.js",
+    "#middlewares/*": "./src/middlewares/*.js"
+  }
 }

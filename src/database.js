@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 mongoose
-  .connect(process.env.URI)
+  .connect(process.env.MONGODB_URI)
   .then((res) => console.log("> Connected..."))
   .catch((err) =>
     console.log(

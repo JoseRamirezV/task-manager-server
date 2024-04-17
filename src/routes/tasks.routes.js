@@ -1,5 +1,5 @@
-const { get, add, update, delete: deleteTask } = require("../controllers/tasks.controller");
-const auth = require("../middlewares/auth.middleware")
+const { get, add, update, delete: deleteTask } = require("#controllers/tasks.controller");
+const auth = require("#middlewares/auth.middleware")
 const router = require("express").Router();
 
 router.get("/:email",auth, get);

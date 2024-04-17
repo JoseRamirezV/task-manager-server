@@ -1,8 +1,13 @@
 const { Types } = require("mongoose");
 const { scheduleJob, scheduledJobs } = require("node-schedule");
-const moment = require("../config/moment");
-const Task = require("../models/task");
-const sendEmail = require("../config/mailer");
+const moment = require("#config/moment");
+
+const Task = require("#models/task");
+const sendEmail = require("#config/mailer");
+
+//TODO
+// borrar tareas cuya fecha limite excedió los 2 días
+// eliminar cuentas no verificadas en 2 días
 
 module.exports = {
   get: async (req, res) => {
@@ -42,15 +47,18 @@ module.exports = {
           limitDate,
         });
       }
-      res.status(200).json({ task: {
-        _id,
-        notificationDate,
-        notify,
-        userEmail,
-        title,
-        description,
-        limitDate,
-      }, message: "Added" });
+      res.status(200).json({
+        task: {
+          _id,
+          notificationDate,
+          notify,
+          userEmail,
+          title,
+          description,
+          limitDate,
+        },
+        message: "Added",
+      });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -59,14 +67,7 @@ module.exports = {
   update: async (req, res) => {
     try {
       const id = req.params.id;
-      const {
-        title,
-        notify,
-        description,
-        notificationDate,
-        limitDate,
-        userEmail,
-      } = req.body;
+      const { notificationDate, notify } = req.body;
       const oldNotification = scheduledJobs[`${id}`];
       if (notify) {
         const { notificationDate: oldNotificationDate } = await Task.findById(
@@ -79,6 +80,7 @@ module.exports = {
         if (dateChanged) {
           if (oldNotification) oldNotification.cancel();
           req.body.notified = false;
+
           const mustNotifyToday =
             moment(notificationDate).format("YYYY-MM-DD") ===
             moment().format("YYYY-MM-DD");
@@ -87,10 +89,7 @@ module.exports = {
             notifyToday({
               id,
               notificationDate,
-              userEmail,
-              title,
-              description,
-              limitDate,
+              ...req.body,
             });
           }
         }
@@ -107,7 +106,10 @@ module.exports = {
   delete: async (req, res) => {
     try {
       const data = req.body;
-      const ids = data.map((id) => new Types.ObjectId(`${id}`));
+      const ids = data.map((id) => {
+        if(scheduledJobs[id]) scheduledJobs[id].cancel()
+        new Types.ObjectId(`${id}`)
+      });
       await Task.deleteMany({
         _id: {
           $in: ids,
@@ -115,7 +117,7 @@ module.exports = {
       });
       res.status(200).json({ message: "Deleted" });
     } catch (error) {
-      res.status(500).json({ error: "couldn't delete" });
+      res.status(500).json({ error: error.message });
     }
   },
 };
@@ -129,6 +131,7 @@ const notifyToday = ({
   description,
 }) => {
   const date = new Date(notificationDate);
+  console.log(`${id}`)
   scheduleJob(`${id}`, date, async () => {
     await sendEmail(userEmail, title, "Notification", {
       description,
