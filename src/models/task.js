@@ -5,8 +5,9 @@ const taskSchema = new Schema(
     title: { type: String, required: true },
     description: { type: String, required: true },
     limitDate: { type: Date, default: null },
-    notify: { type: Boolean, default: false },
     notificationDate: { type: Date, default: null },
+    timezoneOffset: { type: Number, required: true },
+    notify: { type: Boolean, default: false },
     notified: { type: Boolean, default: false },
   },
   {

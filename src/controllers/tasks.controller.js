@@ -23,60 +23,37 @@ module.exports = {
   add: async (req, res) => {
     try {
       const newTask = new Task(req.body);
-      const {
-        _id,
-        notificationDate,
-        notify,
-        userEmail,
-        title,
-        description,
-        limitDate,
-      } = await newTask.save();
+      const { notificationDate, ...data } = await newTask.save();
       const mustNotifyToday =
         moment(notificationDate).format("YYYY-MM-DD") ===
         moment().format("YYYY-MM-DD");
 
       if (mustNotifyToday) {
-        notifyToday({
-          id: _id,
-          notificationDate,
-          userEmail,
-          notify,
-          title,
-          description,
-          limitDate,
-        });
+        notifyToday({ ...data._doc });
       }
+
       res.status(200).json({
-        task: {
-          _id,
-          notificationDate,
-          notify,
-          userEmail,
-          title,
-          description,
-          limitDate,
-        },
+        task: { ...data._doc },
         message: "Added",
       });
     } catch (error) {
+      console.log(error.message);
       res.status(500).json({ error: error.message });
     }
   },
 
   update: async (req, res) => {
     try {
-      const id = req.params.id;
+      const _id = req.params.id;
       const { notificationDate, notify } = req.body;
-      const oldNotification = scheduledJobs[`${id}`];
+      const oldNotification = scheduledJobs[`${_id}`];
       if (notify) {
         const { notificationDate: oldNotificationDate } = await Task.findById(
-          id
+          _id
         );
         const dateChanged =
-          moment(notificationDate).format("YYYY-MM-DD HH:mm") !==
-          moment(oldNotificationDate).format("YYYY-MM-DD HH:mm");
-
+          moment(notificationDate) !== moment(oldNotificationDate);
+        console.log({before: notificationDate})
         if (dateChanged) {
           if (oldNotification) oldNotification.cancel();
           req.body.notified = false;
@@ -87,7 +64,7 @@ module.exports = {
 
           if (mustNotifyToday) {
             notifyToday({
-              id,
+              _id,
               notificationDate,
               ...req.body,
             });
@@ -96,7 +73,8 @@ module.exports = {
       } else {
         if (oldNotification) oldNotification.cancel();
       }
-      const task = await Task.findByIdAndUpdate(id, req.body, { new: true });
+      const task = await Task.findByIdAndUpdate(_id, req.body, { new: true });
+      console.log({after: task.notificationDate});
       res.status(200).json({ task });
     } catch (error) {
       res.status(500).json({ error: "couldn't update" });
@@ -107,8 +85,8 @@ module.exports = {
     try {
       const data = req.body;
       const ids = data.map((id) => {
-        if(scheduledJobs[id]) scheduledJobs[id].cancel()
-        new Types.ObjectId(`${id}`)
+        if (scheduledJobs[id]) scheduledJobs[id].cancel();
+        return new Types.ObjectId(`${id}`);
       });
       await Task.deleteMany({
         _id: {
@@ -123,20 +101,20 @@ module.exports = {
 };
 
 const notifyToday = ({
+  _id,
   notificationDate,
   limitDate,
-  id,
   userEmail,
   title,
   description,
 }) => {
   const date = new Date(notificationDate);
-  console.log(`${id}`)
-  scheduleJob(`${id}`, date, async () => {
+  
+  scheduleJob(`${_id}`, date, async () => {
     await sendEmail(userEmail, title, "Notification", {
       description,
       limitDate: moment(limitDate).format("DD [de] MMMM [del] YYYY"),
     });
-    await Task.updateOne({ _id: id }, { notified: true });
+    await Task.updateOne({ _id }, { notified: true });
   });
 };
